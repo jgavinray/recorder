@@ -72,6 +72,25 @@ Install Rust from https://rustup.rs/:
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
+## Configuration
+
+The application requires a YAML configuration file at `/opt/meeting-recorder/config.yaml`.
+
+Create the directory and config file:
+
+```bash
+sudo mkdir -p /opt/meeting-recorder
+sudo cp config.yaml.example /opt/meeting-recorder/config.yaml
+sudo nano /opt/meeting-recorder/config.yaml  # Edit the output_directory
+```
+
+Example `config.yaml`:
+```yaml
+output_directory: /var/recordings/meetings
+```
+
+The `output_directory` will be created automatically if it doesn't exist.
+
 ## Building
 
 ```bash

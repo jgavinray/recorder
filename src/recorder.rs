@@ -6,6 +6,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
+use crate::config::Config;
 
 /// Main recorder that handles audio recording from devices
 pub struct Recorder {
@@ -34,12 +35,14 @@ impl Recorder {
     }
     
     /// Record audio to a single combined WAV file
-    pub fn record(&self) -> Result<RecordingResult, Box<dyn std::error::Error>> {
+    pub fn record(&self, config: &Config) -> Result<RecordingResult, Box<dyn std::error::Error>> {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)?
             .as_secs();
         
-        let combined_filename = format!("recording_{}.wav", timestamp);
+        let filename = format!("recording_{}.wav", timestamp);
+        let combined_path = config.recording_path(&filename);
+        let combined_filename = combined_path.to_string_lossy().to_string();
         
         let mic_sample_rate = self.mic_config.sample_rate().0;
         let mic_channels = self.mic_config.channels() as u16;

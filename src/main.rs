@@ -1,9 +1,13 @@
-use meeting_recorder::{DeviceManager, Recorder};
+use meeting_recorder::{DeviceManager, Recorder, Config};
 use meeting_recorder::input::{read_index, read_index_optional};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Meeting Recorder - Capturing microphone and system audio");
     println!("========================================================\n");
+    
+    // Load configuration
+    let config = Config::load()?;
+    println!("Output directory: {}\n", config.output_directory);
 
     let device_manager = DeviceManager::new()?;
     device_manager.list_devices()?;
@@ -59,7 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         sys_config,
     );
     
-    recorder.record()?;
+    recorder.record(&config)?;
 
     Ok(())
 }
