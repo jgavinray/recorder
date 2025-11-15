@@ -1,3 +1,32 @@
-target/
-Cargo.lock
+# Rust build artifacts
+/target/
+**/*.rs.bk
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test output files
 *.wav
+test_*.wav
+recording_*.wav
+mic_recording_*.wav
+system_recording_*.wav
+
+# Compiled binaries
+meeting-recorder
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Debug files
+*.pdb
+
+# Environment files
+.env
+.env.local
