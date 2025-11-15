@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc;
 use std::thread;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::SystemTime;
 use crate::config::Config;
 
 /// Main recorder that handles audio recording from devices
@@ -36,11 +36,56 @@ impl Recorder {
     
     /// Record audio to a single combined WAV file
     pub fn record(&self, config: &Config) -> Result<RecordingResult, Box<dyn std::error::Error>> {
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)?
-            .as_secs();
+        // Format timestamp as dd-mm-yyyy-hh-mm
+        let now = SystemTime::now();
+        let datetime = now.duration_since(std::time::UNIX_EPOCH)?;
+        let secs = datetime.as_secs();
         
-        let filename = format!("recording_{}.wav", timestamp);
+        // Convert to local time components
+        // Note: This uses UTC. For local time, we'd need chrono crate.
+        // Using UTC for simplicity and consistency across platforms.
+        let days = secs / 86400;
+        let secs_in_day = secs % 86400;
+        
+        // Calculate date (simplified - doesn't account for leap years perfectly)
+        let mut year = 1970;
+        let mut day_of_year = days as i64;
+        while day_of_year >= 365 {
+            let is_leap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+            let days_in_year = if is_leap { 366 } else { 365 };
+            if day_of_year >= days_in_year {
+                day_of_year -= days_in_year;
+                year += 1;
+            } else {
+                break;
+            }
+        }
+        
+        // Calculate month and day
+        let is_leap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+        let days_in_months = if is_leap {
+            [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        } else {
+            [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        };
+        
+        let mut month = 1;
+        let mut day = day_of_year as u32 + 1;
+        for &days_in_month in &days_in_months {
+            if day > days_in_month {
+                day -= days_in_month;
+                month += 1;
+            } else {
+                break;
+            }
+        }
+        
+        // Calculate hours and minutes
+        let hours = (secs_in_day / 3600) as u32;
+        let minutes = ((secs_in_day % 3600) / 60) as u32;
+        
+        // Format as mm-dd-yyyy-24h-m-recording.wav
+        let filename = format!("{:02}-{:02}-{}-{:02}-{:02}-recording.wav", month, day, year, hours, minutes);
         let combined_path = config.recording_path(&filename);
         let combined_filename = combined_path.to_string_lossy().to_string();
         

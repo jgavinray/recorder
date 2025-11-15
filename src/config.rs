@@ -10,9 +10,29 @@ pub struct Config {
 }
 
 impl Config {
-    /// Load configuration from /opt/meeting-recorder/config.yaml
+    /// Load configuration from platform-specific default location
+    /// - Windows: %PROGRAMDATA%\meeting-recorder\config.yaml
+    /// - macOS/Linux: /opt/meeting-recorder/config.yaml
     pub fn load() -> Result<Self, Box<dyn std::error::Error>> {
-        Self::load_from_path("/opt/meeting-recorder/config.yaml")
+        let config_path = Self::default_config_path()?;
+        Self::load_from_path(config_path)
+    }
+    
+    /// Get the default config path for the current platform
+    /// This is public for testing purposes
+    pub fn default_config_path() -> Result<PathBuf, Box<dyn std::error::Error>> {
+        #[cfg(target_os = "windows")]
+        {
+            use std::env;
+            let program_data = env::var("PROGRAMDATA")
+                .unwrap_or_else(|_| "C:\\ProgramData".to_string());
+            Ok(PathBuf::from(program_data).join("meeting-recorder").join("config.yaml"))
+        }
+        
+        #[cfg(not(target_os = "windows"))]
+        {
+            Ok(PathBuf::from("/opt/meeting-recorder/config.yaml"))
+        }
     }
     
     /// Load configuration from a specific path (useful for testing)

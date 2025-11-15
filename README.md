@@ -1,14 +1,15 @@
 # Meeting Recorder
 
-A Rust program that records both microphone input and system audio (e.g., from Teams/Zoom meetings) on macOS and Linux, saving them to separate WAV files.
+A Rust program that records both microphone input and system audio (e.g., from Teams/Zoom meetings) on macOS, Windows, and Linux, saving them to a single combined WAV file.
 
 ## Features
 
 - Records microphone input and system audio simultaneously
-- Saves recordings to separate WAV files with timestamps
-- Cross-platform support (macOS and Linux)
+- Saves recordings to a single combined WAV file with timestamps
+- Cross-platform support (macOS, Windows, and Linux)
 - Interactive device selection
-- Clean shutdown with Ctrl+C
+- Clean shutdown with Ctrl+C (or Ctrl+Break on Windows)
+- YAML configuration for output directory
 - Minimal dependencies
 
 ## Requirements
@@ -39,6 +40,28 @@ brew install --cask soundflower
 
 **Why Virtual Audio Drivers are Necessary:**
 macOS sandboxing prevents applications from directly accessing system audio output. Virtual audio drivers create a loopback device that routes system audio back into an input channel, making it recordable by standard audio APIs.
+
+### Windows
+
+**System Audio Capture:**
+Windows supports system audio capture natively through WASAPI loopback devices. No additional drivers are required.
+
+1. **Enable Stereo Mix (if available):**
+   - Right-click the speaker icon in the system tray
+   - Select "Sounds" → "Recording" tab
+   - Right-click in the empty space → "Show Disabled Devices"
+   - Enable "Stereo Mix" if it appears
+   - Note: Modern Windows versions may not have Stereo Mix
+
+2. **Use WASAPI Loopback (Recommended):**
+   - The recorder will automatically detect WASAPI loopback devices
+   - Select a loopback device (e.g., "Speakers (WASAPI Loopback)") as your system audio input
+   - These devices capture audio from your default playback device
+
+3. **Alternative: Use VB-Audio Cable (if needed):**
+   - Download from: https://vb-audio.com/Cable/
+   - Install and set as default playback device
+   - Select "CABLE Input" as system audio device in the recorder
 
 ### Linux
 
@@ -74,19 +97,32 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 ## Configuration
 
-The application requires a YAML configuration file at `/opt/meeting-recorder/config.yaml`.
+The application requires a YAML configuration file at a platform-specific location:
 
-Create the directory and config file:
-
+### macOS/Linux
 ```bash
 sudo mkdir -p /opt/meeting-recorder
 sudo cp config.yaml.example /opt/meeting-recorder/config.yaml
 sudo nano /opt/meeting-recorder/config.yaml  # Edit the output_directory
 ```
 
-Example `config.yaml`:
+Config location: `/opt/meeting-recorder/config.yaml`
+
+### Windows
+```powershell
+# Run PowerShell as Administrator
+New-Item -ItemType Directory -Force -Path "$env:PROGRAMDATA\meeting-recorder"
+Copy-Item config.yaml.example "$env:PROGRAMDATA\meeting-recorder\config.yaml"
+notepad "$env:PROGRAMDATA\meeting-recorder\config.yaml"  # Edit the output_directory
+```
+
+Config location: `%PROGRAMDATA%\meeting-recorder\config.yaml` (typically `C:\ProgramData\meeting-recorder\config.yaml`)
+
+### Example `config.yaml`:
 ```yaml
-output_directory: /var/recordings/meetings
+output_directory: /var/recordings/meetings  # macOS/Linux
+# or
+output_directory: C:\Recordings\Meetings    # Windows
 ```
 
 The `output_directory` will be created automatically if it doesn't exist.
@@ -186,6 +222,23 @@ File sizes:
 
 ## Setting Up for Teams/Zoom Meetings
 
+### Windows with WASAPI Loopback:
+
+1. **Start the recorder:**
+   - Run `meeting-recorder.exe`
+   - Select your microphone device
+   - Select a WASAPI loopback device (e.g., "Speakers (WASAPI Loopback)") as system audio
+   - The loopback device will capture audio from your default playback device
+
+2. **In Teams/Zoom:**
+   - Use your normal audio output (no special configuration needed)
+   - The loopback device automatically captures system audio
+
+3. **Alternative with VB-Audio Cable:**
+   - Install VB-Audio Cable from https://vb-audio.com/Cable/
+   - Set Teams/Zoom output to "CABLE Input"
+   - Select "CABLE Input" as system audio device in recorder
+
 ### macOS with BlackHole:
 
 **Option 1: Multi-Output Device (RECOMMENDED - You can hear audio while recording)**
@@ -232,9 +285,12 @@ File sizes:
 
 1. **Device Enumeration:** Uses the `cpal` crate to list all available audio input devices on the system.
 
-2. **Stream Setup:** Creates separate audio input streams for the microphone and system audio device using CoreAudio (macOS) or ALSA/PulseAudio (Linux).
+2. **Stream Setup:** Creates separate audio input streams for the microphone and system audio device using:
+   - CoreAudio on macOS
+   - WASAPI on Windows
+   - ALSA/PulseAudio on Linux
 
-3. **Simultaneous Recording:** Both streams run concurrently, writing audio samples to separate WAV files using the `hound` crate.
+3. **Simultaneous Recording:** Both streams run concurrently, mixing audio samples in real-time and writing to a single combined WAV file using the `hound` crate.
 
 4. **Sample Conversion:** Converts floating-point samples from the audio API to 16-bit integers for WAV file format.
 
@@ -262,6 +318,10 @@ File sizes:
 **macOS:**
 - Virtual audio driver (BlackHole, Soundflower, or Loopback) - **REQUIRED** for system audio capture
 - CoreAudio framework (built into macOS)
+
+**Windows:**
+- No additional drivers required (WASAPI loopback is built-in)
+- Optional: VB-Audio Cable for alternative loopback method
 
 **Linux:**
 - ALSA development libraries (`libasound2-dev`)
